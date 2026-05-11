@@ -1,0 +1,4 @@
+venv/
+hackaday_social_data/
+hackaday_social_data_small/
+**/__pycache__/
