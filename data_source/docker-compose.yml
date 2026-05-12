@@ -1,0 +1,80 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: socialrec-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-socialrec}
+      POSTGRES_USER: ${POSTGRES_USER:-socialrec}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-socialrec}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/001-init.sql:ro
+      - ${DATASET_DIR:-../hackaday_social_data_small}:/seed-data:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-socialrec} -d ${POSTGRES_DB:-socialrec}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: socialrec-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+
+  minio-bootstrap:
+    image: minio/mc:latest
+    container_name: socialrec-minio-bootstrap
+    depends_on:
+      - minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_BUCKET: ${MINIO_BUCKET:-socialrec-assets}
+    volumes:
+      - ${IMAGE_DIR:-../hackaday_social_data_small/images}:/seed-images:ro
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD}; do
+        sleep 2;
+      done;
+      mc mb --ignore-existing local/$${MINIO_BUCKET};
+      mc anonymous set download local/$${MINIO_BUCKET};
+      mc mirror --overwrite /seed-images local/$${MINIO_BUCKET}/images;
+      "
+    restart: "no"
+
+  web:
+    build:
+      context: ..
+      dockerfile: data_source/web/Dockerfile
+    container_name: socialrec-web
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    environment:
+      APP_PORT: ${APP_PORT:-8000}
+      APP_SECRET_KEY: ${APP_SECRET_KEY:-dev-secret-key}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-socialrec}:${POSTGRES_PASSWORD:-socialrec}@postgres:5432/${POSTGRES_DB:-socialrec}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_BUCKET: ${MINIO_BUCKET:-socialrec-assets}
+    ports:
+      - "${APP_PORT:-8000}:8000"
+
+volumes:
+  postgres_data:
+  minio_data:

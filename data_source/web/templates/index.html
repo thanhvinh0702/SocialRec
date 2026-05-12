@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SocialRec Feed</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  </head>
+  <body data-username="{{ username or '' }}">
+    <main class="shell">
+      <section class="sidebar">
+        <h1>SocialRec</h1>
+        <p class="tagline">A simple post feed on top of PostgreSQL and object storage.</p>
+
+        <div id="auth-panel" class="auth-panel">
+          <div id="signed-out">
+            <label for="username-input">Username</label>
+            <input id="username-input" type="text" maxlength="80" placeholder="type a username">
+            <button id="signin-button">Sign in</button>
+          </div>
+
+          <div id="signed-in" hidden>
+            <p>Signed in as <strong id="current-username"></strong></p>
+            <button id="signout-button" class="secondary">Sign out</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="feed-panel">
+        <div id="feed" class="feed"></div>
+        <div id="feed-status" class="feed-status">Loading posts...</div>
+      </section>
+    </main>
+
+    <template id="post-template">
+      <article class="post-card">
+        <div class="post-head">
+          <div>
+            <h2 class="post-title"></h2>
+            <p class="post-meta"></p>
+          </div>
+          <a class="post-link" target="_blank" rel="noreferrer">Source</a>
+        </div>
+        <img class="post-image" alt="">
+        <p class="post-body"></p>
+        <div class="post-tags"></div>
+        <div class="post-actions">
+          <button class="like-button secondary"></button>
+          <span class="comment-count"></span>
+        </div>
+        <div class="comment-list"></div>
+        <form class="comment-form">
+          <input class="comment-input" type="text" placeholder="Write a comment">
+          <button type="submit">Comment</button>
+        </form>
+      </article>
+    </template>
+
+    <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+  </body>
+  </html>
