@@ -9,6 +9,13 @@ DROP TABLE IF EXISTS staging_comments;
 DROP TABLE IF EXISTS staging_posts;
 DROP TABLE IF EXISTS staging_users;
 
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'socialrec') THEN
+        ALTER ROLE socialrec WITH REPLICATION;
+    END IF;
+END $$;
+
 CREATE TABLE staging_users (
     user_id TEXT,
     username TEXT,

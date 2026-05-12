@@ -1,0 +1,135 @@
+services:
+  kafka:
+    image: confluentinc/cp-kafka:7.7.1
+    container_name: socialrec-kafka
+    restart: unless-stopped
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    ports:
+      - "9092:9092"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: socialrec-kafka-ui
+    restart: unless-stopped
+    depends_on:
+      - kafka
+      - connect
+    environment:
+      KAFKA_CLUSTERS_0_NAME: socialrec
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_KAFKACONNECT_0_NAME: debezium-connect
+      KAFKA_CLUSTERS_0_KAFKACONNECT_0_ADDRESS: http://connect:8083
+    ports:
+      - "8080:8080"
+
+  minio-batch:
+    image: minio/minio:latest
+    container_name: socialrec-batch-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${BATCH_MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${BATCH_MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "${BATCH_MINIO_API_PORT:-9100}:9000"
+      - "${BATCH_MINIO_CONSOLE_PORT:-9101}:9001"
+    volumes:
+      - batch_minio_data:/data
+
+  connect:
+    image: quay.io/debezium/connect:2.7.3.Final
+    container_name: socialrec-connect
+    restart: unless-stopped
+    depends_on:
+      - kafka
+    environment:
+      BOOTSTRAP_SERVERS: kafka:29092
+      GROUP_ID: socialrec-connect
+      CONFIG_STORAGE_TOPIC: socialrec.connect.configs
+      OFFSET_STORAGE_TOPIC: socialrec.connect.offsets
+      STATUS_STORAGE_TOPIC: socialrec.connect.status
+      CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      STATUS_STORAGE_REPLICATION_FACTOR: 1
+      KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      KEY_CONVERTER_SCHEMAS_ENABLE: "false"
+      VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+    ports:
+      - "8083:8083"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  connector-init:
+    image: curlimages/curl:8.8.0
+    container_name: socialrec-connector-init
+    restart: "no"
+    depends_on:
+      - connect
+    volumes:
+      - ./connectors/socialrec-postgres-source.config.json:/config/source.config.json:ro
+    entrypoint: >
+      /bin/sh -c "
+      until curl -fsS http://connect:8083/connectors; do
+        sleep 3;
+      done;
+      curl -fsS -X PUT http://connect:8083/connectors/socialrec-postgres-source/config
+      -H 'Content-Type: application/json'
+      --data @/config/source.config.json;
+      "
+
+  raw-writer:
+    build:
+      context: ..
+      dockerfile: ingestion/raw_writer/Dockerfile
+    container_name: socialrec-raw-writer
+    restart: unless-stopped
+    depends_on:
+      - kafka
+      - minio-ready
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      KAFKA_TOPICS: socialrec.cdc.public.users,socialrec.cdc.public.posts,socialrec.cdc.public.post_media,socialrec.cdc.public.comments,socialrec.cdc.public.interactions
+      KAFKA_GROUP_ID: socialrec-raw-writer
+      MINIO_ENDPOINT: minio-batch:9000
+      MINIO_ACCESS_KEY: ${BATCH_MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${BATCH_MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_BUCKET: socialrec-batch-raw
+      MINIO_SECURE: "false"
+      RAW_PREFIX: raw-cdc
+      FLUSH_RECORDS: 500
+      FLUSH_SECONDS: 15
+
+  minio-ready:
+    image: minio/mc:latest
+    container_name: socialrec-minio-ready
+    restart: "no"
+    depends_on:
+      - minio-batch
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio-batch:9000 ${BATCH_MINIO_ROOT_USER:-minioadmin} ${BATCH_MINIO_ROOT_PASSWORD:-minioadmin}; do
+        sleep 2;
+      done;
+      mc mb --ignore-existing local/socialrec-batch-raw;
+      "
+
+volumes:
+  kafka_data:
+  batch_minio_data:
