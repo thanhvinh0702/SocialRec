@@ -1,14 +1,63 @@
+import time
 from fastapi import FastAPI
-import requests
+from cassandra.cluster import Cluster
 
 app = FastAPI()
 
-RECOMMENDER_URL = "http://recommender:8001"
+cluster = None
+session = None
+
+
+def init_db():
+    global cluster, session
+
+    for i in range(30):
+        try:
+            print(f"Connecting Cassandra... attempt {i+1}/30")
+            cluster = Cluster(["cassandra"], port = 9042)
+            session = cluster.connect("socialrec")
+
+            print("Cassandra connected")
+            return
+
+        except Exception as e:
+            print("Cassandra not ready:", repr(e))
+            time.sleep(3)
+
+    print("Cassandra NOT ready, API still running")
+    session = None
+
+
+@app.on_event("startup")
+def startup():
+    init_db()
 
 
 @app.get("/recommend/{user_id}")
-def recommend(user_id: str):
+def recommend_user(user_id: str):
 
-    res = requests.get(f"{RECOMMENDER_URL}/recommend/{user_id}")
+    if session is None:
+        return {"error": "Cassandra not ready"}
 
-    return res.json()
+    query = """
+        SELECT item_id, score
+        FROM socialrec.user_interactions
+        WHERE user_id=%s
+    """
+
+    rows = session.execute(query, (user_id,))
+
+    results = []
+
+    for r in rows:
+        results.append({
+            "item_id": r.item_id,
+            "score": r.score
+        })
+
+    results.sort(key=lambda x: x["score"], reverse=True)
+
+    return {
+        "user_id": user_id,
+        "recommendations": results[:10]
+    }
