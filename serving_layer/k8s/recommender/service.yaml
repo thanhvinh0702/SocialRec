@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: recommender
+
+spec:
+  selector:
+    app: recommender
+
+  ports:
+    - port: 8001
+      targetPort: 8001
+
+  type: ClusterIP
