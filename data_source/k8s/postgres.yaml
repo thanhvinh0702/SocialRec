@@ -35,9 +35,35 @@ spec:
       labels:
         app: postgres
     spec:
+      securityContext:
+        fsGroup: 999
+      initContainers:
+        - name: postgres-permissions
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - chown -R 999:999 /var/lib/postgresql/data && chmod 0700 /var/lib/postgresql/data
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
       containers:
         - name: postgres
           image: postgres:16
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 999
+            runAsNonRoot: true
+          command:
+            - postgres
+            - -c
+            - wal_level=logical
+            - -c
+            - max_wal_senders=10
+            - -c
+            - max_replication_slots=10
           env:
             - name: POSTGRES_DB
               valueFrom:

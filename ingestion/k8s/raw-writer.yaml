@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: raw-writer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: raw-writer
+  template:
+    metadata:
+      labels:
+        app: raw-writer
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: raw-writer
+          image: socialrec-raw-writer:latest
+          imagePullPolicy: Never
+          env:
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: kafka:9092
+            - name: KAFKA_TOPICS
+              value: socialrec.cdc.public.users,socialrec.cdc.public.posts,socialrec.cdc.public.post_media,socialrec.cdc.public.comments,socialrec.cdc.public.interactions
+            - name: KAFKA_GROUP_ID
+              value: socialrec-raw-writer
+            - name: MINIO_ENDPOINT
+              value: minio-batch:9000
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: socialrec-ingestion-secrets
+                  key: batch-minio-root-user
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: socialrec-ingestion-secrets
+                  key: batch-minio-root-password
+            - name: MINIO_BUCKET
+              valueFrom:
+                secretKeyRef:
+                  name: socialrec-ingestion-secrets
+                  key: batch-minio-bucket
+            - name: MINIO_SECURE
+              value: "false"
+            - name: RAW_PREFIX
+              value: raw-cdc
+            - name: FLUSH_RECORDS
+              value: "500"
+            - name: FLUSH_SECONDS
+              value: "15"

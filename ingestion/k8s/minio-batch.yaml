@@ -1,0 +1,103 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: batch-minio-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio-batch
+spec:
+  selector:
+    app: minio-batch
+  ports:
+    - name: api
+      port: 9000
+      targetPort: 9000
+    - name: console
+      port: 9001
+      targetPort: 9001
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio-batch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minio-batch
+  template:
+    metadata:
+      labels:
+        app: minio-batch
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: minio-batch
+          image: minio/minio:latest
+          args: ["server", "/data", "--console-address", ":9001"]
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: socialrec-ingestion-secrets
+                  key: batch-minio-root-user
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: socialrec-ingestion-secrets
+                  key: batch-minio-root-password
+          ports:
+            - containerPort: 9000
+            - containerPort: 9001
+          volumeMounts:
+            - name: batch-minio-data
+              mountPath: /data
+      volumes:
+        - name: batch-minio-data
+          persistentVolumeClaim:
+            claimName: batch-minio-data
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: batch-minio-bootstrap
+spec:
+  template:
+    spec:
+      enableServiceLinks: false
+      restartPolicy: OnFailure
+      containers:
+        - name: batch-minio-bootstrap
+          image: minio/mc:latest
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: socialrec-ingestion-secrets
+                  key: batch-minio-root-user
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: socialrec-ingestion-secrets
+                  key: batch-minio-root-password
+            - name: MINIO_BUCKET
+              valueFrom:
+                secretKeyRef:
+                  name: socialrec-ingestion-secrets
+                  key: batch-minio-bucket
+          command:
+            - /bin/sh
+            - -c
+            - |
+              until mc alias set local http://minio-batch:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"; do
+                sleep 2
+              done
+              mc mb --ignore-existing local/"$MINIO_BUCKET"
