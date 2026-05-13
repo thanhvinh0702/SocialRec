@@ -1,0 +1,36 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cassandra-init
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+
+      containers:
+        - name: init
+          image: cassandra:4.1
+
+          command: ["bash", "-c"]
+
+          args:
+            - |
+              echo "Waiting for Cassandra..."
+              sleep 20
+
+              echo "Running init script..."
+
+              cqlsh cassandra 9042 <<EOF
+              CREATE KEYSPACE IF NOT EXISTS socialrec
+              WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+
+              USE socialrec;
+
+              CREATE TABLE IF NOT EXISTS user_interactions (
+                  user_id text,
+                  item_id text,
+                  score float,
+                  timestamp bigint,
+                  PRIMARY KEY (user_id, item_id)
+              );
+              EOF
