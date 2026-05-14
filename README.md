@@ -37,7 +37,21 @@ docker compose up -d
 ```
 ### K8S
 ```
+cd ingestion/k8s
+
+k apply -f secret.yaml -n socialrec
+k apply -f minio-batch.yaml -n socialrec
+k apply -f kafka-ui.yaml -n socialrec
+
+# Setup Kafka cluster
+sed -i 's/namespace: .*/namespace: socialrec/' strimzi-1.0.0/install/cluster-operator/*RoleBinding*.yaml
+k apply -f ./strimzi-1.0.0/install/cluster-operator -n socialrec
+k apply -f ./strimzi-1.0.0/kafka-cluster.yaml -n socialrec
+
+# Setup Kafka connect cluster
 eval "$(minikube docker-env)"
-docker build -t socialrec-raw-writer:latest -f ingestion/raw_writer/Dockerfile .
-kubectl apply -k ingestion/k8s
+docker build -t my-kafka-connect:v1 ./connect
+kubectl apply -f ./connect/kafka-connect.yaml -n socialrec
+kubectl apply -f ./connect/kafka-connector-postgres.yaml -n socialrec
+kubectl apply -f ./connect/kafka-connector-s3.yaml -n socialrec
 ```

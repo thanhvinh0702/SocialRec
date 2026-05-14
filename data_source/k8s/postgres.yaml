@@ -52,34 +52,41 @@ spec:
       containers:
         - name: postgres
           image: postgres:16
+
           securityContext:
             runAsUser: 999
             runAsGroup: 999
             runAsNonRoot: true
-          command:
-            - postgres
+
+          args:
             - -c
             - wal_level=logical
             - -c
             - max_wal_senders=10
             - -c
             - max_replication_slots=10
+
           env:
             - name: POSTGRES_DB
               valueFrom:
                 secretKeyRef:
                   name: socialrec-secrets
                   key: postgres-db
+
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
                   name: socialrec-secrets
                   key: postgres-user
+
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: socialrec-secrets
                   key: postgres-password
+
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
           ports:
             - containerPort: 5432
           readinessProbe:

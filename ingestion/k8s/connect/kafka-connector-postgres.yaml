@@ -1,0 +1,40 @@
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaConnector
+metadata:
+  name: kafka-connector-postgres
+  labels:
+    strimzi.io/cluster: kafka-connect-cluster
+spec:
+  class: io.debezium.connector.postgresql.PostgresConnector
+  tasksMax: 2
+  config:
+    # PostgreSQL connection
+    database.hostname: postgres
+    database.port: 5432
+    # database.user: ${secrets:kafka/debezium-secret:username}
+    database.user: socialrec
+    # database.password: ${secrets:kafka/debezium-secret:password}
+    database.password: socialrec
+    database.dbname: socialrec
+
+    # Logical replication
+    plugin.name: pgoutput
+    slot.name: debezium
+    publication.name: dbz_publication
+
+    # Kafka topic prefix
+    topic.prefix: postgres
+
+    # Optional filtering
+    table.include.list: public.users,public.posts,public.post_media,public.comments,public.interactions
+
+    # Schema history
+    schema.history.internal.kafka.bootstrap.servers: kafka-cluster-kafka-bootstrap:9092
+    schema.history.internal.kafka.topic: schema-changes.socialrec
+
+    # IMPORTANT: use schemaless JSON
+    key.converter: org.apache.kafka.connect.json.JsonConverter
+    key.converter.schemas.enable: false
+
+    value.converter: org.apache.kafka.connect.json.JsonConverter
+    value.converter.schemas.enable: false

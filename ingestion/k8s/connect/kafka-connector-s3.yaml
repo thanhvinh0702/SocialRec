@@ -1,0 +1,42 @@
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaConnector
+metadata:
+  name: kafka-connector-s3
+  labels:
+    strimzi.io/cluster: kafka-connect-cluster
+spec:
+  class: io.confluent.connect.s3.S3SinkConnector
+  tasksMax: 2
+  config:
+    # Topics to consume (matches debezium output topics)
+    topics: postgres.public.users,postgres.public.posts,postgres.public.post_media,postgres.public.comments,postgres.public.interactions
+
+    # MinIO connection
+    s3.bucket.name: socialrec-batch-raw
+    s3.region: us-east-1
+    store.url: http://minio-batch:9000
+    aws.access.key.id: minioadmin
+    aws.secret.access.key: minioadmin
+
+    # Storage
+    storage.class: io.confluent.connect.s3.storage.S3Storage
+    format.class: io.confluent.connect.s3.format.json.JsonFormat
+    flush.size: 1000
+    rotate.interval.ms: 60000
+    rotate.schedule.interval.ms: 10000
+
+    # Partitioning (organizes files by topic/date)
+    partitioner.class: io.confluent.connect.storage.partitioner.TimeBasedPartitioner
+    path.format: "'year'=YYYY/'month'=MM/'day'=dd/'hour'=HH"
+    partition.duration.ms: 3600000
+    locale: en_US
+    timezone: UTC
+
+    # Converters (match debezium output format)
+    key.converter: org.apache.kafka.connect.json.JsonConverter
+    key.converter.schemas.enable: "false"
+    value.converter: org.apache.kafka.connect.json.JsonConverter
+    value.converter.schemas.enable: "false"
+
+    # Schema compatibility
+    schema.compatibility: NONE

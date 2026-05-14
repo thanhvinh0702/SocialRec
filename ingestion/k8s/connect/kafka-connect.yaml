@@ -1,0 +1,21 @@
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaConnect
+metadata:
+  name: kafka-connect-cluster
+  annotations:
+    strimzi.io/use-connector-resources: "true"
+spec:
+  version: 4.2.0
+  image: my-kafka-connect:v1
+  replicas: 1
+  bootstrapServers: kafka-cluster-kafka-bootstrap:9092
+  groupId: kafka-connect-cluster
+  configStorageTopic: kafka-connect-cluster-configs
+  statusStorageTopic: kafka-connect-cluster-status
+  offsetStorageTopic: kafka-connect-cluster-offsets
+  config:
+    # config.providers: secrets
+    # config.providers.secrets.class: io.strimzi.kafka.KubernetesSecretConfigProvider
+    config.storage.replication.factor: -1
+    offset.storage.replication.factor: -1
+    status.storage.replication.factor: -1
