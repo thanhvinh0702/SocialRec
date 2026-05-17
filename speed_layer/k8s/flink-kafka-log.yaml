@@ -45,7 +45,7 @@ spec:
             - name: KAFKA_BOOTSTRAP_SERVERS
               value: kafka-cluster-kafka-bootstrap:9092
             - name: KAFKA_TOPIC
-              value: postgres.public.interactions
+              value: postgres.public.interactions,postgres.public.posts
             - name: KAFKA_GROUP_ID
               value: socialrec-flink-kafka-log
             - name: REDIS_HOST
