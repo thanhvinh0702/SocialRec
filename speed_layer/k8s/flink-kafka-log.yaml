@@ -48,6 +48,12 @@ spec:
               value: postgres.public.interactions
             - name: KAFKA_GROUP_ID
               value: socialrec-flink-kafka-log
+            - name: REDIS_HOST
+              value: redis.socialrec.svc.cluster.local
+            - name: REDIS_PORT
+              value: "6379"
+            - name: REDIS_RECENT_VIEWS_LIMIT
+              value: "100"
   job:
     jarURI: local:///opt/flink/usrlib/socialrec-flink-kafka-log.jar
     entryClass: com.socialrec.speedlayer.KafkaLogJob
