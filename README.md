@@ -68,4 +68,15 @@ helm install spark-operator spark-operator/spark-operator \
 # Setup Spark Application
 eval "$(minikube docker-env)"
 docker build -t socialrec-spark-preprocess:v1 ./spark
+
+# Setup Airflow
+eval "$(minikube docker-env)"
+docker build -t my-preprocess-dag:v1 ./airflow
+kubectl apply -f ./airflow/airflow-sparkapplication-rbac.yaml
+
+helm repo add apache-airflow https://airflow.apache.org
+helm install airflow apache-airflow/airflow \
+    --namespace socialrec \
+    --set images.airflow.repository=my-preprocess-dag \
+    --set images.airflow.tag=v1
 ```

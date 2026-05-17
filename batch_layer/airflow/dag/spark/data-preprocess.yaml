@@ -1,0 +1,47 @@
+apiVersion: sparkoperator.k8s.io/v1beta2
+kind: SparkApplication
+metadata:
+  name: spark-data-preprocess
+  namespace: socialrec
+spec:
+  type: Python
+  pythonVersion: "3"
+  mode: cluster
+  image: socialrec-spark-preprocess:v1
+  imagePullPolicy: IfNotPresent
+  mainApplicationFile: local:///opt/spark/app/phase1_preprocess.py
+  sparkVersion: 4.0.1
+  restartPolicy:
+    type: Never
+  sparkConf:
+    spark.hadoop.fs.s3a.endpoint: http://minio-batch:9000
+    spark.hadoop.fs.s3a.path.style.access: "true"
+    spark.hadoop.fs.s3a.impl: org.apache.hadoop.fs.s3a.S3AFileSystem
+    spark.hadoop.fs.s3a.aws.credentials.provider: org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider
+    spark.hadoop.fs.s3a.connection.ssl.enabled: "false"
+    spark.sql.session.timeZone: UTC
+  driver:
+    cores: 1
+    memory: 1g
+    serviceAccount: spark-operator-spark
+    env:
+      - name: MINIO_ENDPOINT
+        value: http://minio-batch:9000
+      - name: MINIO_ACCESS_KEY
+        value: minioadmin
+      - name: MINIO_SECRET_KEY
+        value: minioadmin
+      - name: MINIO_BUCKET
+        value: socialrec-batch
+      - name: RAW_PREFIX
+        value: bronze/
+      - name: SILVER_PREFIX
+        value: silver
+      - name: INPUT_FORMAT
+        value: json
+      - name: WRITE_MODE
+        value: overwrite
+  executor:
+    instances: 2
+    cores: 1
+    memory: 1g
