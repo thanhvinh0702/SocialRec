@@ -1,0 +1,33 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cassandra-seed
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+
+      containers:
+        - name: seed
+          image: cassandra:4.1
+          command: ["bash", "-c"]
+          args:
+            - |
+              echo "Waiting for Cassandra..."
+
+              until cqlsh cassandra 9042 -e "DESCRIBE KEYSPACES" >/dev/null 2>&1; do
+                sleep 5
+              done
+
+              echo "Running seed..."
+
+              cqlsh cassandra 9042 -f /seed/seed.cql
+
+          volumeMounts:
+            - name: seed-sql
+              mountPath: /seed
+
+      volumes:
+        - name: seed-sql
+          configMap:
+            name: cassandra-seed-sql

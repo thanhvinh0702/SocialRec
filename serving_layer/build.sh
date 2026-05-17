@@ -15,6 +15,9 @@ kubectl delete configmap cassandra-init-sql --ignore-not-found
 kubectl create configmap cassandra-init-sql \
   --from-file=init.cql=./recommender/init.cql
 
+kubectl create configmap cassandra-seed-sql \
+  --from-file=seed.cql=./recommender/seed.cql
+  
 echo "Deploy Cassandra..."
 kubectl apply -f k8s/cassandra/
 
