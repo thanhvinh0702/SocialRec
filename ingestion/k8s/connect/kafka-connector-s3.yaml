@@ -8,11 +8,12 @@ spec:
   class: io.confluent.connect.s3.S3SinkConnector
   tasksMax: 2
   config:
+    topics.dir: bronze
     # Topics to consume (matches debezium output topics)
     topics: postgres.public.users,postgres.public.posts,postgres.public.post_media,postgres.public.comments,postgres.public.interactions
 
     # MinIO connection
-    s3.bucket.name: socialrec-batch-raw
+    s3.bucket.name: socialrec-batch
     s3.region: us-east-1
     store.url: http://minio-batch:9000
     aws.access.key.id: minioadmin

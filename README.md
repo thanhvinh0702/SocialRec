@@ -39,14 +39,12 @@ docker compose up -d
 ```
 cd ingestion/k8s
 
-k apply -f secret.yaml -n socialrec
-k apply -f minio-batch.yaml -n socialrec
-k apply -f kafka-ui.yaml -n socialrec
+kubectl apply -k common
 
-# Setup Kafka cluster
+# Setup Kafka operator
 sed -i 's/namespace: .*/namespace: socialrec/' strimzi-1.0.0/install/cluster-operator/*RoleBinding*.yaml
-k apply -f ./strimzi-1.0.0/install/cluster-operator -n socialrec
-k apply -f ./strimzi-1.0.0/kafka-cluster.yaml -n socialrec
+kubectl apply -f ./strimzi-1.0.0/install/cluster-operator -n socialrec
+kubectl apply -f ./strimzi-1.0.0/kafka-cluster.yaml -n socialrec
 
 # Setup Kafka connect cluster
 eval "$(minikube docker-env)"
@@ -54,4 +52,20 @@ docker build -t my-kafka-connect:v1 ./connect
 kubectl apply -f ./connect/kafka-connect.yaml -n socialrec
 kubectl apply -f ./connect/kafka-connector-postgres.yaml -n socialrec
 kubectl apply -f ./connect/kafka-connector-s3.yaml -n socialrec
+```
+
+## Start Batch Layer
+### K8S
+```
+cd batch_layer
+
+# Setup spark operator
+helm repo add spark-operator https://kubeflow.github.io/spark-operator
+helm install spark-operator spark-operator/spark-operator \
+    --namespace socialrec \
+    --set "spark.jobNamespaces={socialrec}"
+
+# Setup Spark Application
+eval "$(minikube docker-env)"
+docker build -t socialrec-spark-preprocess:v1 ./spark
 ```
