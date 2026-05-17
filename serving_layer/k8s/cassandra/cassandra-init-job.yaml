@@ -3,6 +3,7 @@ kind: Job
 metadata:
   name: cassandra-init
 spec:
+  backoffLimit: 5
   template:
     spec:
       restartPolicy: Never
@@ -12,25 +13,24 @@ spec:
           image: cassandra:4.1
 
           command: ["bash", "-c"]
-
           args:
             - |
               echo "Waiting for Cassandra..."
-              sleep 20
+
+              until cqlsh cassandra 9042 -e "DESCRIBE KEYSPACES" >/dev/null 2>&1; do
+                echo "Cassandra not ready..."
+                sleep 5
+              done
 
               echo "Running init script..."
 
-              cqlsh cassandra 9042 <<EOF
-              CREATE KEYSPACE IF NOT EXISTS socialrec
-              WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+              cqlsh cassandra 9042 -f /init/init.cql
 
-              USE socialrec;
+          volumeMounts:
+            - name: init-sql
+              mountPath: /init
 
-              CREATE TABLE IF NOT EXISTS user_interactions (
-                  user_id text,
-                  item_id text,
-                  score float,
-                  timestamp bigint,
-                  PRIMARY KEY (user_id, item_id)
-              );
-              EOF
+      volumes:
+        - name: init-sql
+          configMap:
+            name: cassandra-init-sql

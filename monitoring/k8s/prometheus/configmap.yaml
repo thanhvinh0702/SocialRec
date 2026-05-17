@@ -11,10 +11,13 @@ data:
 
     scrape_configs:
 
-      - job_name: 'api'
+      - job_name: 'recommender'
+        metrics_path: /metrics
+
         static_configs:
-          - targets: ['api:8000']
+          - targets: ['recommender:8000']
 
       - job_name: 'recommender'
+        metrics_path: /metrics
         static_configs:
           - targets: ['recommender:8001']
