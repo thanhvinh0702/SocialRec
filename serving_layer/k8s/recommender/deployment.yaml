@@ -18,7 +18,8 @@ spec:
     spec:
       containers:
         - name: recommender
-          image: your-recommender:latest
+          image: recommender:latest
+          imagePullPolicy: Never
 
           ports:
             - containerPort: 8001
@@ -26,7 +27,6 @@ spec:
           env:
             - name: CASSANDRA_HOST
               value: cassandra
-
             - name: CASSANDRA_PORT
               value: "9042"
 
