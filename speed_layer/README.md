@@ -90,9 +90,9 @@ spec:
   serviceAccount: flink-job
 ```
 
-## Step 4. Run the Kafka to Log Flink Job
+## Step 4. Run the Kafka to Redis Flink Job
 
-This job verifies that Flink can connect to Kafka and read Debezium events. It only logs raw events; it does not write to Redis.
+This job verifies that Flink can connect to Kafka and read Debezium events. It logs raw events and writes interaction create events (`op = c`) to Redis.
 
 The Kubernetes Debezium connector currently uses `topic.prefix: postgres`, so the deployed job reads:
 
@@ -142,4 +142,18 @@ Expected log line shape:
 
 ```text
 Debezium interaction event: {"before":null,"after":{...},"source":{...},"op":"r",...}
+```
+
+Check Redis output:
+
+```bash
+kubectl exec -it -n socialrec redis-master-0 -- redis-cli
+ZREVRANGE trending:global 0 10 WITHSCORES
+LRANGE user:1:recent_views 0 10
+```
+
+For the local Redis manifest in this repository, the pod is a Deployment named `redis`:
+
+```bash
+kubectl exec -it -n socialrec deploy/redis -- redis-cli
 ```
