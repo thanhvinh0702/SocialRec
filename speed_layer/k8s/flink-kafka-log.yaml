@@ -1,0 +1,56 @@
+apiVersion: flink.apache.org/v1beta1
+kind: FlinkDeployment
+metadata:
+  name: socialrec-kafka-log
+  labels:
+    app: socialrec-kafka-log
+    app.kubernetes.io/name: socialrec
+    app.kubernetes.io/component: flink-kafka-log
+spec:
+  image: socialrec-flink-kafka-log:latest
+  imagePullPolicy: IfNotPresent
+  flinkVersion: v1_20
+  mode: native
+  serviceAccount: flink-job
+  flinkConfiguration:
+    taskmanager.numberOfTaskSlots: "1"
+    parallelism.default: "1"
+    kubernetes.rest-service.exposed.type: ClusterIP
+  jobManager:
+    resource:
+      memory: 1024m
+      cpu: 0.5
+    podTemplate:
+      metadata:
+        labels:
+          app: socialrec-kafka-log
+          component: jobmanager
+  taskManager:
+    resource:
+      memory: 1024m
+      cpu: 0.5
+    podTemplate:
+      metadata:
+        labels:
+          app: socialrec-kafka-log
+          component: taskmanager
+  podTemplate:
+    metadata:
+      labels:
+        app: socialrec-kafka-log
+    spec:
+      containers:
+        - name: flink-main-container
+          env:
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: kafka-cluster-kafka-bootstrap:9092
+            - name: KAFKA_TOPIC
+              value: postgres.public.interactions
+            - name: KAFKA_GROUP_ID
+              value: socialrec-flink-kafka-log
+  job:
+    jarURI: local:///opt/flink/usrlib/socialrec-flink-kafka-log.jar
+    entryClass: com.socialrec.speedlayer.KafkaLogJob
+    parallelism: 1
+    upgradeMode: stateless
+    state: running
