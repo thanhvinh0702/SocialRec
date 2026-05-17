@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+cassandra-driver
+prometheus-client
+pydantic
+requests
