@@ -3,8 +3,8 @@ from airflow import DAG
 from airflow.providers.cncf.kubernetes.operators.spark_kubernetes import SparkKubernetesOperator
 from airflow.providers.standard.operators.empty import EmptyOperator
 
-SPARK_APPLICATION_FILE = "spark/data-preprocess.yaml"
-
+SPARK_APPLICATION_FILE_PHASE1 = "spark/data-preprocess.yaml"
+SPARK_APPLICATION_FILE_PHASE2 = "spark/feature-engineering.yaml"
 
 with DAG(
     dag_id="data_preprocess",
@@ -20,7 +20,17 @@ with DAG(
     phase1_preprocess = SparkKubernetesOperator(
         task_id="phase1_preprocess",
         namespace="socialrec",
-        application_file=SPARK_APPLICATION_FILE,
+        application_file=SPARK_APPLICATION_FILE_PHASE1,
+        kubernetes_conn_id="kubernetes_default",
+        get_logs=True,
+        delete_on_termination=False,
+        do_xcom_push=False,
+    )
+
+    phase2_feature_engineering = SparkKubernetesOperator(
+        task_id="phase2_feature_engineering",
+        namespace="socialrec",
+        application_file=SPARK_APPLICATION_FILE_PHASE2,
         kubernetes_conn_id="kubernetes_default",
         get_logs=True,
         delete_on_termination=False,
@@ -29,4 +39,4 @@ with DAG(
 
     end = EmptyOperator(task_id="end")
 
-    start >> phase1_preprocess >> end
+    start >> phase1_preprocess >> phase2_feature_engineering >> end

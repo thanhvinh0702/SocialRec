@@ -80,4 +80,11 @@ helm install airflow apache-airflow/airflow \
     --namespace socialrec \
     --set images.airflow.repository=my-preprocess-dag \
     --set images.airflow.tag=v1
+    
+# Light version
+helm install airflow apache-airflow/airflow \
+    --namespace socialrec \
+    --set images.airflow.repository=my-preprocess-dag \
+    --set images.airflow.tag=v1 \
+    -f ./airflow/airflow-light.yaml
 ```
