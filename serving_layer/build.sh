@@ -11,6 +11,7 @@ echo "Create Cassandra init ConfigMap..."
 
 # xoá cái cũ nếu có (tránh stale)
 kubectl delete configmap cassandra-init-sql --ignore-not-found
+kubectl delete configmap cassandra-seed-sql --ignore-not-found
 
 kubectl create configmap cassandra-init-sql \
   --from-file=init.cql=./recommender/init.cql
