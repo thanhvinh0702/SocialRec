@@ -3,12 +3,9 @@ kind: Service
 metadata:
   name: cassandra
 spec:
+  clusterIP: None
   selector:
     app: cassandra
-
   ports:
-    - protocol: TCP
-      port: 9042
-      targetPort: 9042
-
-  type: ClusterIP
+    - port: 9042
+      name: cql
