@@ -1,0 +1,23 @@
+  apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: es-scripts
+  data:
+    create-index.py: |
+      from elasticsearch import Elasticsearch
+
+      es = Elasticsearch("http://elasticsearch:9200")
+
+      if not es.indices.exists(index="posts"):
+          es.indices.create(
+              index="posts",
+              mappings={
+                  "properties": {
+                      "post_id": {"type": "keyword"},
+                      "content": {"type": "text"},
+                      "user_id": {"type": "keyword"},
+                      "like_count": {"type": "integer"},
+                      "trending_score": {"type": "integer"}
+                  }
+              }
+          )

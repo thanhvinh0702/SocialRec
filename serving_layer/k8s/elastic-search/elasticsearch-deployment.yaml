@@ -1,9 +1,12 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: elasticsearch
-
 spec:
+  serviceName: elasticsearch
+
+  # DEV: 1 node
+  # PROD: 3+ nodes
   replicas: 1
 
   selector:
@@ -22,27 +25,57 @@ spec:
 
           ports:
             - containerPort: 9200
+            - containerPort: 9300
 
           env:
-            - name: discovery.type
-              value: single-node
+            # ===== CLUSTER CONFIG =====
+            - name: cluster.name
+              value: es-cluster
 
+            # node identity (auto: es-0, es-1,...)
+            - name: node.name
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+
+            # ===== DISCOVERY (SCALE-READY) =====
+            - name: discovery.seed_hosts
+              value: "elasticsearch"
+
+            - name: cluster.initial_master_nodes
+              value: "elasticsearch-0"
+
+            # ===== JVM =====
             - name: ES_JAVA_OPTS
               value: "-Xms512m -Xmx512m"
 
+            # ===== DEV MODE (KHÔNG single-node) =====
             - name: xpack.security.enabled
               value: "false"
 
-            - name: xpack.security.http.ssl.enabled
-              value: "false"
+          volumeMounts:
+            - name: data
+              mountPath: /usr/share/elasticsearch/data
 
-            - name: xpack.security.transport.ssl.enabled
-              value: "false"
-          resources:
-            requests:
-              memory: "1Gi"
-              cpu: "500m"
+          readinessProbe:
+            httpGet:
+              path: /_cluster/health
+              port: 9200
+            initialDelaySeconds: 30
+            periodSeconds: 10
 
-            limits:
-              memory: "2Gi"
-              cpu: "1"
+          livenessProbe:
+            httpGet:
+              path: /_cluster/health
+              port: 9200
+            initialDelaySeconds: 60
+            periodSeconds: 20
+
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi
