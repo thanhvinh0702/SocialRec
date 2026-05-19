@@ -11,11 +11,3 @@ def search(q):
             }
         }
     )
-
-def get_feed():
-    return es.search(
-        index="posts",
-        size=20,
-        sort=[{"trending_score": "desc"}],
-        query={"match_all": {}}
-    )

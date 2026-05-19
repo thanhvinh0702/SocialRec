@@ -7,35 +7,33 @@ spec:
   selector:
     matchLabels:
       app: search-api
-
   template:
     metadata:
       labels:
         app: search-api
-
     spec:
       containers:
         - name: search-api
           image: search-api:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Never
 
           ports:
             - containerPort: 8000
 
           env:
-            - name: ELASTICSEARCH_URL
-              value: "http://elasticsearch:9200"
+            - name: CASSANDRA_HOST
+              value: "cassandra"
+            - name: ELASTIC_HOST
+              value: "elasticsearch"
 
           readinessProbe:
             httpGet:
-              path: /docs
+              path: /health
               port: 8000
             initialDelaySeconds: 10
-            periodSeconds: 5
 
           livenessProbe:
             httpGet:
-              path: /docs
+              path: /health
               port: 8000
             initialDelaySeconds: 20
-            periodSeconds: 10

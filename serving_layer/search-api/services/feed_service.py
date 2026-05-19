@@ -1,13 +1,14 @@
-from clients.es_client import es
+from clients.cassandra_client import get_feed_by_user
 
 
-def get_feed(size: int = 20):
-    res = es.search(
-        index="posts",
-        size=size,
-        sort=[
-            {"trending_score": "desc"}
-        ]
-    )
+def build_feed(user_id: str):
+    rows = get_feed_by_user(user_id)
 
-    return res["hits"]["hits"]
+    return [
+        {
+            "post_id": r.post_id,
+            "content": r.content,
+            "created_at": str(r.created_at)
+        }
+        for r in rows
+    ]

@@ -1,0 +1,22 @@
+server:
+  workers: 1 
+  config:
+    query.max-memory: "512MB" # Bóp nhỏ query memory xuống
+    query.max-memory-per-node: "256MB" # Ép Node dùng ít RAM
+coordinator:
+  jvm:
+    maxHeapSize: "1G" # Giới hạn Heap Size cho não bộ (Coordinator)
+worker:
+  jvm:
+    maxHeapSize: "1G"
+
+additionalCatalogs:
+  datalake: |
+    connector.name=hive
+    hive.metastore=file
+    hive.metastore.catalog.dir=s3a://socialrec-batch/gold_bi/metadata
+    hive.s3.aws-access-key=minioadmin
+    hive.s3.aws-secret-key=minioadmin
+    hive.s3.endpoint=http://minio-batch.socialrec.svc.cluster.local:9000
+    hive.s3.path-style-access=true
+    hive.non-managed-table-writes-enabled=true

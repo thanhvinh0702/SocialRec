@@ -17,7 +17,7 @@ spec:
             - |
               echo "Waiting for Cassandra..."
 
-              until cqlsh cassandra 9042 -e "DESCRIBE KEYSPACES" >/dev/null 2>&1; do
+              until cqlsh cassandra.default.svc.cluster.local 9042 -e "DESCRIBE KEYSPACES" >/dev/null 2>&1; do
                 echo "Cassandra not ready..."
                 sleep 5
               done

@@ -1,15 +1,7 @@
-from clients.es_client import es
+from clients.es_client import search
 
 
-def search_posts(query: str, size: int = 20):
-    res = es.search(
-        index="posts",
-        size=size,
-        query={
-            "match": {
-                "content": query
-            }
-        }
-    )
+def search_posts(q: str):
+    res = search(q)
 
     return res["hits"]["hits"]
