@@ -9,7 +9,7 @@ statsd:
 triggerer:
   enabled: false
 dagProcessor:
-  enabled: false
+  enabled: true
 
 # 3. Increase startup times so Kubernetes doesn't kill it prematurely
 webserver:

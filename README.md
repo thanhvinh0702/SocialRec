@@ -69,6 +69,8 @@ helm install spark-operator spark-operator/spark-operator \
 eval "$(minikube docker-env)"
 docker build -t socialrec-spark-preprocess:v1 ./spark/data_preprocess/silver
 docker build -t socialrec-spark-feature-engineering:v1 ./spark/data_preprocess/gold
+docker build -t socialrec-pytorch-embeddings:v1 ./pytorch/embeddings
+
 
 # Setup Airflow
 eval "$(minikube docker-env)"
