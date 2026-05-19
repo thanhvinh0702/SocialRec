@@ -64,7 +64,7 @@ def build_input_path(table_name: str) -> str:
     if RAW_PREFIX.startswith("raw-cdc/"):
         safe_topic = f"socialrec_cdc_public_{table_name}"
         return f"s3a://{MINIO_BUCKET}/{RAW_PREFIX}topic={safe_topic}/"
-    return f"s3a://{MINIO_BUCKET}/{RAW_PREFIX}"
+    return f"s3a://{MINIO_BUCKET}/{RAW_PREFIX}postgres.public.{table_name}/"
 
 
 def load_raw_events(spark: SparkSession, table_name: str) -> DataFrame:
@@ -175,6 +175,14 @@ def build_current_state_table(events_df: DataFrame, table_name: str) -> DataFram
     selected_columns = [F.col(f"payload.`{field}`").alias(field) for field in payload_fields]
     selected_columns.extend(F.col(column) for column in metadata_columns if column in table_events.columns)
     clean_df = table_events.select(*selected_columns)
+
+    # # Drop payload columns that are entirely null (cross-table schema artifacts)
+    # null_summary = clean_df.select(
+    #     *[F.sum(F.col(c).isNotNull().cast("long")).alias(c) for c in payload_fields]
+    # ).first()
+    # drop_cols = [c for c in payload_fields if (null_summary[c] or 0) == 0]
+    # if drop_cols:
+    #     clean_df = clean_df.drop(*drop_cols)
 
     pk_columns = infer_table_pk_columns(clean_df, table_name)
     if pk_columns:

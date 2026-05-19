@@ -67,7 +67,8 @@ helm install spark-operator spark-operator/spark-operator \
 
 # Setup Spark Application
 eval "$(minikube docker-env)"
-docker build -t socialrec-spark-preprocess:v1 ./spark
+docker build -t socialrec-spark-preprocess:v1 ./spark/data_preprocess/silver
+docker build -t socialrec-spark-feature-engineering:v1 ./spark/data_preprocess/gold
 
 # Setup Airflow
 eval "$(minikube docker-env)"
@@ -79,4 +80,11 @@ helm install airflow apache-airflow/airflow \
     --namespace socialrec \
     --set images.airflow.repository=my-preprocess-dag \
     --set images.airflow.tag=v1
+    
+# Light version
+helm install airflow apache-airflow/airflow \
+    --namespace socialrec \
+    --set images.airflow.repository=my-preprocess-dag \
+    --set images.airflow.tag=v1 \
+    -f ./airflow/airflow-light.yaml
 ```

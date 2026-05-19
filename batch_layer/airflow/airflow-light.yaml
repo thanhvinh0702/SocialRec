@@ -1,0 +1,33 @@
+# 1. Switch to LocalExecutor (kills Redis & Worker Pods)
+executor: "LocalExecutor"
+
+# 2. Disable heavy distributed unused services
+redis:
+  enabled: false
+statsd:
+  enabled: false
+triggerer:
+  enabled: false
+dagProcessor:
+  enabled: false
+
+# 3. Increase startup times so Kubernetes doesn't kill it prematurely
+webserver:
+  livenessProbe:
+    initialDelaySeconds: 120
+    timeoutSeconds: 30
+    failureThreshold: 20
+  readinessProbe:
+    initialDelaySeconds: 120
+    timeoutSeconds: 30
+    failureThreshold: 20
+  startupProbe:
+    timeoutSeconds: 30
+    failureThreshold: 20
+    periodSeconds: 10
+
+scheduler:
+  livenessProbe:
+    initialDelaySeconds: 120
+    timeoutSeconds: 30
+    failureThreshold: 20
